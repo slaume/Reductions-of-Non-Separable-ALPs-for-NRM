@@ -1,0 +1,39 @@
+
+#hub and spoke networks from Adelman (2007), H&S
+
+#SETTINGS
+##################
+	param L := 3;
+	param T := 50;
+	param C := 6;
+##################
+
+param p0 := 0.2;
+
+let I := 2*L; 
+let J := 2*(2*L+L*(L-1)); 
+
+let {i in 1..I, j in 0..J} A[i,j] := 0; 
+let {i in 1..I, fare in 1..2} 
+	A[i,i+(fare-1)*(2*L+L*(L-1))] := 1;
+let {l in 1..L, ll in 1..L-1, fare in 1..2} 
+	A[L+l, 2*L+(l-1)*(L-1)+ll+(fare-1)*(2*L+L*(L-1))] := 1;
+let {l in 1..L, ll in 1..L-1, fare in 1..2} 
+	A[((l+ll-1) mod L)+1, 2*L+(l-1)*(L-1)+ll+(fare-1)*(2*L+L*(L-1))] := 1; 
+	
+let {i in 1..I} c[i] := C;
+	
+let {j in 1..J/2} fconst[j] := round(Uniform(14.5,49.5)); 
+let {j in J/2+1..J} fconst[j] := fconst[j-J/2]*5;
+let fconst[0] := 0;
+let {t in Tcal, j in Jcal} f[t,j] := fconst[j];
+
+let {j in 1..J/2} pconst[j] := Uniform(0,1);
+for {t in 1..T} {
+	for {j in 1..J/2} {
+		let p[t,j] := (1-p0)*0.75*pconst[j]/(sum{jj in 1..J/2} pconst[jj]);
+		let p[t,j+J/2] := (1-p0)*0.25*pconst[j]/(sum{jj in 1..J/2} pconst[jj]);
+	}
+	let p[t,0] := 1-sum{j in 1..J}p[t,j];
+}
+for {j in Jcal} let d[j] := sum{t in 1..T} p[t,j];

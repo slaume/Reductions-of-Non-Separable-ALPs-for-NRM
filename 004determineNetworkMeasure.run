@@ -1,0 +1,40 @@
+
+
+#compute indices of partition
+for {n in 1..N} {
+	#compute size of Icaln
+	let qn[n] := sum{i in Icaln[n]} 1;
+	#compute indices of Icaln
+	let counter := 1;
+	for {i in Icaln[n]} {
+		let inq[n,counter] := i;
+		let counter := counter + 1;
+	}
+}
+for {n in N+1..I} {
+	let qn[n] := 0;
+}
+
+#Bellman equation
+for {n in 1..N} {
+	let {Rn in 0..Rnmax[n]} Wstar[T+1,n,Rn] := 0;
+	for {t in T..1 by -1} {
+		for {Rn in 0..Rnmax[n]} {
+			let {q in 1..qn[n]} rNWM[n,q] 
+				:= floor((Rn mod prod{qq in 1..q}(c[inq[n,q]]+1))
+				/(prod{qq in 1..q-1}(c[inq[n,qq]]+1)));
+			let Wstar[t,n,Rn] := sum{j in Jcal} (
+				max{u in 0..min{q in 1..qn[n]}(min(1,rNWM[n,q]-A[inq[n,q],j]+1))} (
+					p[t,j]*Wstar[t+1,n,
+						sum{q in 1..qn[n]} (prod{qq in 1..q-1} (c[inq[n,qq]]+1))*
+						(rNWM[n,q]-u*A[inq[n,q],j])
+					] + p[t,j]*f[t,j]*u
+					+ sum{i in 1..I diff Icaln[n]} betaoverline[t,i,j,u] 
+				)
+			);
+		}
+	}
+	let Msubnetwork[n] := sum{q in 1..qn[n]} Woverline[inq[n,q]] - Wstar[1,n,Rnmax[n]];
+}
+let Mpartition := sum{n in 1..N} Msubnetwork[n];
+

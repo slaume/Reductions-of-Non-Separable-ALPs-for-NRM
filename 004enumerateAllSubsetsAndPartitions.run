@@ -1,0 +1,146 @@
+
+
+let N := ceil(I/qBar);
+
+
+#PREPARATION
+
+for {n in 1..floor(I/qBar)} {	
+	let qCompPcal := qBar-1;
+	let ICompPcal := I-(n-1)*qBar-(I mod qBar)-1;
+	#start---------------------
+	let Pcal[qCompPcal,ICompPcal] := {};
+	for {IcalPR in 0..ICompPcal^qCompPcal-1} {
+		if sum{q in 1..qCompPcal} (1+floor((IcalPR mod ICompPcal^q)/ICompPcal^(q-1))) 
+		<= ICompPcal then {
+			let Pcal[qCompPcal,ICompPcal] := Pcal[qCompPcal,ICompPcal] union {IcalPR};
+		}
+	}
+	#end---------------------
+	let Pbar[n] := sum{llll in Pcal[qBar-1,I-(n-1)*qBar-(I mod qBar)-1]}1;
+	let counter := 1;
+	for {llll in Pcal[qBar-1,I-(n-1)*qBar-(I mod qBar)-1]} {
+		let IcalnPsiPart[n,counter] := llll;
+		let counter := counter + 1;
+	}
+}
+let qCompPcal := I mod qBar;
+let ICompPcal := I;
+#start---------------------
+let Pcal[qCompPcal,ICompPcal] := {};
+for {IcalPR in 0..ICompPcal^qCompPcal-1} {
+	if sum{q in 1..qCompPcal} (1+floor((IcalPR mod ICompPcal^q)/ICompPcal^(q-1))) 
+	<= ICompPcal then {
+		let Pcal[qCompPcal,ICompPcal] := Pcal[qCompPcal,ICompPcal] union {IcalPR};
+	}
+}
+#end---------------------
+let qCompPcal := qBar;
+let ICompPcal := I;
+#start---------------------
+let Pcal[qCompPcal,ICompPcal] := {};
+for {IcalPR in 0..ICompPcal^qCompPcal-1} {
+	if sum{q in 1..qCompPcal} (1+floor((IcalPR mod ICompPcal^q)/ICompPcal^(q-1))) 
+	<= ICompPcal then {
+		let Pcal[qCompPcal,ICompPcal] := Pcal[qCompPcal,ICompPcal] union {IcalPR};
+	}
+}
+#end---------------------
+
+
+#GO THROUGH ALL PARTITIONS
+
+for {IcalPsiRest in Pcal[I mod qBar,I], ptildePsi in PcalTilde} {
+	let IcalnPsiReverseFromScalar := IcalPsiRest;
+	let IcalReverseFromScalar := Ical;
+	let qReverseFromScalar := I mod qBar;
+	#start---------------------
+	let IReverseFromScalar := sum{xxx in IcalReverseFromScalar}1;	
+	let counter := 1;
+	for {i in IcalReverseFromScalar} {
+		let iAllReverseFromScalar[counter] := i;
+		let counter := counter + 1;
+	}	
+	let iAux := 0;
+	let IcalnReverseFromScalar := {};
+	for {q in 1..qReverseFromScalar} {
+		let iAux := iAux 
+			+ (1+floor((IcalnPsiReverseFromScalar mod IReverseFromScalar^q)/IReverseFromScalar^(q-1)));
+		let IcalnReverseFromScalar := IcalnReverseFromScalar union {iAllReverseFromScalar[iAux]};
+		let iReverseFromScalar[q] := iAllReverseFromScalar[iAux];
+	}
+	#end---------------------
+	let IcalRest := IcalnReverseFromScalar;
+	let qn[N] := I mod qBar;
+	let {q in 1..(I mod qBar)} inq[N,q] := iReverseFromScalar[q];
+	
+	let Icaln[N] := {};
+	for {q in 1..qn[N]} let Icaln[N] 
+		:= Icaln[N] union {inq[N,q]};
+	for {n in 1..floor(I/qBar)} {
+		let ptilde[n] := floor((ptildePsi mod (prod{nn in 1..n}Pbar[nn]))
+			/(prod{nn in 1..n-1}Pbar[nn])) + 1;
+	}	
+	let IcalLeft := 1..I diff IcalRest;
+	for {n in 1..floor(I/qBar)} {
+		let qn[n] := qBar;	
+		let counter := 1;
+		for {iii in IcalLeft} {
+			if counter = 1 then let inq[n,1] := iii;
+			let counter := counter + 1;
+		}
+		let IcalLeft := IcalLeft diff {inq[n,1]};
+		let IcalnPsiReverseFromScalar := IcalnPsiPart[n,ptilde[n]];
+		let IcalReverseFromScalar := IcalLeft;
+		let qReverseFromScalar := qBar-1;
+		#start---------------------
+		let IReverseFromScalar := sum{xxx in IcalReverseFromScalar}1;	
+		let counter := 1;
+		for {i in IcalReverseFromScalar} {
+			let iAllReverseFromScalar[counter] := i;
+			let counter := counter + 1;
+		}	
+		let iAux := 0;
+		let IcalnReverseFromScalar := {};
+		for {q in 1..qReverseFromScalar} {
+			let iAux := iAux 
+				+ (1+floor((IcalnPsiReverseFromScalar mod IReverseFromScalar^q)/IReverseFromScalar^(q-1)));
+			let IcalnReverseFromScalar := IcalnReverseFromScalar union {iAllReverseFromScalar[iAux]};
+			let iReverseFromScalar[q] := iAllReverseFromScalar[iAux];
+		}
+		#end---------------------
+		let {q in 2..qBar} inq[n,q] := iReverseFromScalar[q-1];
+		let Icaln[n] := {};
+		for {q in 1..qn[n]} let Icaln[n] 
+			:= Icaln[n] union {inq[n,q]};
+		let IcalLeft := IcalLeft diff IcalnReverseFromScalar;	
+	}	
+	let {n in 1..N} IcalnAllPartitions[IcalPsiRest,ptildePsi,n] := Icaln[n];
+}
+
+
+#GO THROUGH ALL SUBSETS
+
+for {IcalnPsi in Pcal[qBar,I]} {
+	let IcalnPsiReverseFromScalar := IcalnPsi;
+	let IcalReverseFromScalar := Ical;
+	let qReverseFromScalar := qBar;
+	let IReverseFromScalar := sum{xxx in IcalReverseFromScalar}1;
+	let counter := 1;
+	for {i in IcalReverseFromScalar} {
+		let iAllReverseFromScalar[counter] := i;
+		let counter := counter + 1;
+	}
+	let iAux := 0;
+	let IcalnReverseFromScalar := {};
+	for {q in 1..qReverseFromScalar} {
+		let iAux := iAux 
+			+ (1+floor((IcalnPsiReverseFromScalar mod IReverseFromScalar^q)/IReverseFromScalar^(q-1)));
+		let IcalnReverseFromScalar := IcalnReverseFromScalar union {iAllReverseFromScalar[iAux]};
+		let iReverseFromScalar[q] := iAllReverseFromScalar[iAux];
+	}
+	let IcalnAux := IcalnReverseFromScalar;	
+	let IcalnAllSubsets[IcalnPsi] := IcalnAux;
+}
+
+

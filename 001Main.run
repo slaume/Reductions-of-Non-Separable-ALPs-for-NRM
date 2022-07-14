@@ -1,0 +1,152 @@
+reset;
+
+include 003modelfile.mod;
+
+#SELECT TASK
+#task = 1: solve and simulate with manually defined partition
+#task = 2: find partition with smallest network measure
+#task = 3: find subset with smallest network measure
+#task = 4: solve and simulate for all partitions
+##################
+	let task := 4;
+##################
+
+#SELECT DATA FILE
+#datatype = 1: hub-and-spoke, H&S, see "002datafileHS.dat"
+#datatype = 2: simple bus line, SBL, see "002datafileSBL.dat"
+#datatype = 3: consecutive bus line, CBL, see "002datafileCBL.dat"
+#datatype = 4: real bus line, RBL, see "002datafileRBL.dat"
+##################
+	let datatype := 2;
+##################
+
+if datatype = 1 then {data 002datafileHS.dat;}
+if datatype = 2 then {data 002datafileSBL.dat;}
+if datatype = 3 then {data 002datafileCBL.dat;}
+if datatype = 4 then {data 002datafileRBL.dat;}
+
+#OTHER SETTINGS
+#qBar: size of subsets
+#S: number of simulation runs
+#solveH = 1: solve (H_NSEP), solveH = 0: solve (P'_NSEP)
+##################
+	let qBar := 2; 
+	let S := 100; 
+	let solveH := 0;
+##################
+
+#SETTINGS FOR TASK 1
+##################
+	if task = 1 then {
+		let N := 2;
+		let Icaln[1] := {3};
+		let Icaln[2] := {1,2};
+	}
+##################
+
+
+#----------------------------------------------------
+#TASK 1: SOLVE AND SIMULATE USING THE ABOVE PARTITION
+#----------------------------------------------------
+
+if task = 1 then {
+	
+	solve DSPL;
+	let {i in Ical} Woverline[i] := W[1,i,c[i]];
+	let {t in Tcal, i in 1..I, j in Jcal, u in 0..1} betaoverline[t,i,j,u] := beta[t,i,j,u];
+	
+	include 004determineNetworkMeasure.run;
+	include 004solveAndSimulate.run;
+	
+	display upperbound;
+	display revenue;
+	display standarderror;
+	display Mpartition;
+}
+
+
+#----------------------------------------------------
+#TASK 2: FIND PARTITION WITH SMALLEST NETWORK MEASURE
+#----------------------------------------------------
+
+if task = 2 then {
+	
+	solve DSPL;
+	let {i in Ical} Woverline[i] := W[1,i,c[i]];
+	let {t in Tcal, i in 1..I, j in Jcal, u in 0..1} betaoverline[t,i,j,u] := beta[t,i,j,u];
+	
+	include 004enumerateAllSubsetsAndPartitions.run;
+	
+	let N := ceil(I/qBar);
+	
+	let maxM := -Infinity;
+	let {n in 1..N} IcalnMaxM[n] := {};
+	for {IcalPsiRest in Pcal[I mod qBar,I], ptildePsi in PcalTilde} {
+		let {n in 1..N} Icaln[n] := IcalnAllPartitions[IcalPsiRest,ptildePsi,n];
+		include 004determineNetworkMeasure.run;
+		if Mpartition >= maxM then {
+			let {n in 1..N} IcalnMaxM[n] := Icaln[n];
+			let maxM := Mpartition;
+		}
+	}
+	let {n in 1..N} Icaln[n] := IcalnMaxM[n];
+	
+	display Icaln;
+}
+
+
+#-------------------------------------------------
+#TASK 3: FIND SUBSET WITH SMALLEST NETWORK MEASURE
+#-------------------------------------------------
+
+if task = 3 then {
+	
+	solve DSPL;
+	let {i in Ical} Woverline[i] := W[1,i,c[i]];
+	let {t in Tcal, i in 1..I, j in Jcal, u in 0..1} betaoverline[t,i,j,u] := beta[t,i,j,u];
+	
+	include 004enumerateAllSubsetsAndPartitions.run;
+	
+	let N := 1;
+	
+	let maxM := -Infinity;
+	let IcalnMaxM[1] := {};
+	for {IcalnPsi in Pcal[qBar,I]} {
+		let Icaln[1] := IcalnAllSubsets[IcalnPsi];
+		include 004determineNetworkMeasure.run;
+		if Mpartition >= maxM then {
+			let IcalnMaxM[1] := Icaln[1];
+			let maxM := Mpartition;
+		}
+	}
+	let Icaln[1] := IcalnMaxM[1];
+	
+	display Icaln[1];
+}
+
+
+#----------------------------------------------------
+#TASK 4: FIND PARTITION WITH SMALLEST NETWORK MEASURE
+#----------------------------------------------------
+
+if task = 4 then {
+	
+	let solveH := 0;
+	
+	solve DSPL;
+	let {i in Ical} Woverline[i] := W[1,i,c[i]];
+	let {t in Tcal, i in 1..I, j in Jcal, u in 0..1} betaoverline[t,i,j,u] := beta[t,i,j,u];
+	
+	include 004enumerateAllSubsetsAndPartitions.run;
+	
+	let N := ceil(I/qBar);
+	
+	printf "%s,%s,%s,%s\n" , 'network measure' , 'upper bound' , 'revenue' , 'standard error' > ./000correlation.txt;
+	for {IcalPsiRest in Pcal[I mod qBar,I], ptildePsi in PcalTilde} {
+		let {n in 1..N} Icaln[n] := IcalnAllPartitions[IcalPsiRest,ptildePsi,n];
+		include 004determineNetworkMeasure.run;
+		include 004solveAndSimulate.run;
+		printf "%f,%f,%f,%f\n" , Mpartition , upperbound , revenue , standarderror > ./000correlation.txt;
+	}		
+}
+

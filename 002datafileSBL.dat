@@ -1,0 +1,40 @@
+
+#simple bus line, SBL
+
+#SETTINGS
+##################
+	param I := 3;
+	param C := 1;
+	param T := 3;
+	param loverline := 2;
+	param lunderline := 1;
+##################
+
+param p0 := 0.2;
+
+let J := sum {leg1 in 1..I, leg2 in leg1+lunderline-1..min(leg1+loverline-1,I)} 1;
+let {i in Ical} c[i] := C;
+let {i in Ical, j in Jcal} A[i,j] := 0;
+
+let counter := 1;
+for {leg1 in 1..I, leg2 in leg1+lunderline-1..min(leg1+loverline-1,I)} {
+	for {i in leg1..leg2} {
+		let A[i,counter] := 1;
+	}
+	let counter := counter+1;
+}
+
+let fconst[0] := 0;
+for {j in 1..J} {
+	let fconst[j] := sqrt(sum {i in Ical} A[i,j]);
+	let pconst[j] := 1;
+}
+let {t in Tcal, j in Jcal} f[t,j] := fconst[j];
+
+for {t in 1..T} {
+	for {j in 1..J} {
+		let p[t,j] := (1-p0)*pconst[j]/(sum{jj in 1..J} pconst[jj]);
+	}
+	let p[t,0] := 1-sum{j in 1..J}p[t,j];
+}
+for {j in Jcal} let d[j] := sum{t in 1..T} p[t,j];

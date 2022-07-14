@@ -1,0 +1,77 @@
+
+
+#compute indices of partition
+for {n in 1..N} {
+	#compute size of Icaln
+	let qn[n] := sum{i in Icaln[n]} 1;
+	#compute indices of Icaln
+	let counter := 1;
+	for {i in Icaln[n]} {
+		let inq[n,counter] := i;
+		let counter := counter + 1;
+	}
+}
+for {n in N+1..I} {
+	let qn[n] := 0;
+}
+let qBar := max{n in 1..N} qn[n];
+
+#SOLVE COMPACT ALP
+if solveH = 1 then {
+	solve Hnonsep;
+} else {
+	solve Pnonsepprime; 
+}
+let upperbound := Z;
+
+#extract value function approximation
+let {i in IcalAL} Vlin[1,i] := con3a[i];
+let {t in 2..T, i in IcalAL} Vlin[t,i] := con3b[t,i];
+let {i in IcalAL} Vlin[T+1,i] := 0;	
+let {n in 1..N} Vnonlin[1,n,Rnmax[n]] := con1a[n];
+let {t in 2..T, n in 1..N, Rn in 0..Rnmax[n]} Vnonlin[t,n,Rn] := con1b[t,n,Rn];
+let {n in 1..N, Rn in 0..Rnmax[n]} Vnonlin[T+1,n,Rn] := 0;
+
+#SIMULATION
+for {s in 1..S} {
+	#initialize remaining capacity and gain
+	let {i in Ical} rCapacity[i] := c[i];
+	let gain[s] := 0;
+	#go through all time steps t
+	for {t in 1..T} {		
+		#determine arriving customer for RM
+		let dice := Uniform(0,1);
+		let jArrived := 0;
+		for {j in 1..J} {	
+			if sum {jj in 1..j-1} p[t,jj] < dice <= sum {jj in 1..j} p[t,jj] then 
+				let jArrived := j;
+		}
+		#determine availability
+		if min{i in Ical} (rCapacity[i]-A[i,jArrived]) < 0 then
+			let available := 0;
+		else let available := 1;
+		#simulate sale
+		if available = 1 then {
+			#compute marginal value, which is difference of approximate value function
+			let marginalvalue := sum {i in IcalAL} Vlin[t+1,i]*A[i,jArrived]
+				+ sum {n in 1..N} 
+				(
+					Vnonlin[t+1,n,sum{q in 1..qn[n]}rCapacity[inq[n,q]]*prod{qq in 1..q-1}(c[inq[n,qq]]+1)]
+					- Vnonlin[t+1,n,sum{q in 1..qn[n]}(rCapacity[inq[n,q]]-A[inq[n,q],jArrived])*prod{qq in 1..q-1}(c[inq[n,qq]]+1)]
+				);
+			#sale decision for independent demand 
+			if jArrived > 0 then {
+				if f[t,jArrived] + tol >= marginalvalue then {
+					let {i in Ical} rCapacity[i] := rCapacity[i] - A[i,jArrived];
+					let gain[s] := gain[s] + f[t,jArrived];	
+				}
+			}
+		}
+	}
+}
+#compute average revenue and standard error
+let revenue := 1/max(1,S)*sum{s in 1..S}gain[s];
+let standarderror := sqrt(1/max(1,S)*sum{s in 1..S} 
+	(gain[s]-revenue)^2/(max(1,S-1)));
+
+
