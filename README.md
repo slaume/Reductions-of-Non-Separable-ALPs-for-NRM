@@ -1,4 +1,4 @@
-# NonseparableALPforNRM
+# Reductions-of-Non-Separable-ALPs-for-NRM
 
 The files in this depository can be used for reproducing the results presented in the paper "Reductions of Non-Separable Approximate Linear Programs for Network Revenue Management" (Simon Laumer and Christiane Barz) submitted to EJOR. 
 
