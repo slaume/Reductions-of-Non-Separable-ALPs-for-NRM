@@ -1,0 +1,39 @@
+
+
+#example where (P_NSEP), (P'_NSEP), (H_NSEP) are not equivalent, NE
+
+param I := 4;
+param J := 8; 
+
+param A :=
+1,0 0	1,1 1	1,2 1	1,3 0	1,4 0	1,5 1	1,6 0	1,7 0	1,8 0	 
+2,0 0	2,1 0	2,2 0	2,3 1	2,4 1	2,5 0	2,6 1	2,7 0	2,8 0	 
+3,0 0	3,1 1	3,2 0	3,3 0	3,4 1	3,5 0	3,6 0	3,7 1	3,8 0	 
+4,0 0	4,1 0	4,2 1	4,3 1	4,4 0	4,5 0	4,6 0	4,7 0	4,8 1	 
+;
+
+param C := 3;
+param T := 18;
+
+param fconst :=
+0 0
+1 140
+2 150
+3 160
+4 150
+5 100
+6 100
+7 100
+8 100
+;
+
+let {i in Ical} c[i] := C;
+
+for {t in 1..T, j in 1..J}
+	let p[t,j] := 1.5/T;
+	
+let {t in Tcal, j in Jcal} f[t,j] := fconst[j];
+
+for {t in 1..T} let p[t,0] := 1 - sum{j in 1..J}p[t,j];
+
+for {j in Jcal} let d[j] := sum{t in 1..T} p[t,j];

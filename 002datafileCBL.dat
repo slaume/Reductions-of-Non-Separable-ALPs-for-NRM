@@ -5,8 +5,8 @@
 ##################
 	param m := 3;
 	param I := 9; #NEEDS TO BE A MULTIPLE OF m
-	param C := 2;
 	param T := 18;
+	param C := 2;
 ##################
 
 param p0 := 0.2;

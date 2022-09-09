@@ -3,11 +3,11 @@
 
 #SETTINGS
 ##################
-	param I := 3;
-	param C := 1;
-	param T := 3;
-	param loverline := 2;
+	param I := 8;
+	param T := 8;
+	param C := 2;
 	param lunderline := 1;
+	param loverline := 8;
 ##################
 
 param p0 := 0.2;

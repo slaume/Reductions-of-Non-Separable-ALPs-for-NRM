@@ -4,43 +4,62 @@ include 003modelfile.mod;
 
 #SELECT TASK
 #task = 1: solve and simulate with manually defined partition
-#task = 2: find partition with smallest network measure
-#task = 3: find subset with smallest network measure
+#task = 2: find partition with largest network measure
+#task = 3: find subset with largest network measure
 #task = 4: solve and simulate for all partitions
 ##################
 	let task := 4;
 ##################
 
 #SELECT DATA FILE
-#datatype = 1: hub-and-spoke, H&S, see "002datafileHS.dat"
-#datatype = 2: simple bus line, SBL, see "002datafileSBL.dat"
-#datatype = 3: consecutive bus line, CBL, see "002datafileCBL.dat"
-#datatype = 4: real bus line, RBL, see "002datafileRBL.dat"
+#datatype = 1: small running example, see "002datafileSRE.dat"
+#datatype = 2: hub-and-spoke, H&S, see "002datafileHS.dat"
+#datatype = 3: simple bus line, SBL, see "002datafileSBL.dat"
+#datatype = 4: consecutive bus line, CBL, see "002datafileCBL.dat"
+#datatype = 5: real bus line, RBL, see "002datafileRBL.dat"
+#datatype = 6: example for non-equivalence of ALPs, see "002datafileNE.dat"
 ##################
-	let datatype := 2;
+	let datatype := 6;
 ##################
 
-if datatype = 1 then {data 002datafileHS.dat;}
-if datatype = 2 then {data 002datafileSBL.dat;}
-if datatype = 3 then {data 002datafileCBL.dat;}
-if datatype = 4 then {data 002datafileRBL.dat;}
+if datatype = 1 then {data 002datafileSRE.dat;}
+if datatype = 2 then {data 002datafileHS.dat;}
+if datatype = 3 then {data 002datafileSBL.dat;}
+if datatype = 4 then {data 002datafileCBL.dat;}
+if datatype = 5 then {data 002datafileRBL.dat;}
+if datatype = 6 then {data 002datafileNE.dat;}
 
 #OTHER SETTINGS
 #qBar: size of subsets
 #S: number of simulation runs
-#solveH = 1: solve (H_NSEP), solveH = 0: solve (P'_NSEP)
+#alp: may be 
+#	'Pprime': 	reduction (P'_NSEP), 
+#	'H':		heuristic reduction (H_NSEP)
+#	'P': 		exact (P_NSEP) using a state-space reduction
+#Attention: 'P' needs much computating power, especially if J is large!
+#primaldual: may be
+#	'primal': 	solve primal (P'), (H), (P)
+#	'dual': 	solve dual (D'), (D^H), (D)
 ##################
-	let qBar := 2; 
-	let S := 100; 
-	let solveH := 0;
+	let qBar := 2; #not used for task 1
+	let S := 100; #not used for task 2 and 3
+	let alp := 'Pprime'; #not used for task 2, 3 and 4
+	let primaldual := 'dual'; 
 ##################
 
 #SETTINGS FOR TASK 1
 ##################
 	if task = 1 then {
 		let N := 2;
-		let Icaln[1] := {3};
-		let Icaln[2] := {1,2};
+		let Icaln[1] := {2,4};
+		let Icaln[2] := {1,3};
+		#let Icaln[3] := {1};
+		#let Icaln[3] := {3};
+		#let Icaln[4] := {4};
+		#let Icaln[5] := {5};
+		#let Icaln[6] := {6};
+		#let Icaln[7] := {7};
+		#let Icaln[8] := {8};
 	}
 ##################
 
@@ -50,30 +69,25 @@ if datatype = 4 then {data 002datafileRBL.dat;}
 #----------------------------------------------------
 
 if task = 1 then {
-	
-	solve DSPL;
-	let {i in Ical} Woverline[i] := W[1,i,c[i]];
-	let {t in Tcal, i in 1..I, j in Jcal, u in 0..1} betaoverline[t,i,j,u] := beta[t,i,j,u];
-	
-	include 004determineNetworkMeasure.run;
+
 	include 004solveAndSimulate.run;
 	
 	display upperbound;
 	display revenue;
 	display standarderror;
-	display Mpartition;
+	display computingtime;
 }
 
 
 #----------------------------------------------------
-#TASK 2: FIND PARTITION WITH SMALLEST NETWORK MEASURE
+#TASK 2: FIND PARTITION WITH LARGEST NETWORK MEASURE
 #----------------------------------------------------
 
 if task = 2 then {
 	
-	solve DSPL;
-	let {i in Ical} Woverline[i] := W[1,i,c[i]];
-	let {t in Tcal, i in 1..I, j in Jcal, u in 0..1} betaoverline[t,i,j,u] := beta[t,i,j,u];
+	solve DNM;
+	let {i in Ical} Woverline[i] := WNM[1,i,c[i]];
+	let {t in Tcal, i in 1..I, j in Jcal, u in 0..1} betaoverline[t,i,j,u] := betaNM[t,i,j,u];
 	
 	include 004enumerateAllSubsetsAndPartitions.run;
 	
@@ -101,9 +115,9 @@ if task = 2 then {
 
 if task = 3 then {
 	
-	solve DSPL;
-	let {i in Ical} Woverline[i] := W[1,i,c[i]];
-	let {t in Tcal, i in 1..I, j in Jcal, u in 0..1} betaoverline[t,i,j,u] := beta[t,i,j,u];
+	solve DNM;
+	let {i in Ical} Woverline[i] := WNM[1,i,c[i]];
+	let {t in Tcal, i in 1..I, j in Jcal, u in 0..1} betaoverline[t,i,j,u] := betaNM[t,i,j,u];
 	
 	include 004enumerateAllSubsetsAndPartitions.run;
 	
@@ -125,17 +139,17 @@ if task = 3 then {
 }
 
 
-#----------------------------------------------------
-#TASK 4: FIND PARTITION WITH SMALLEST NETWORK MEASURE
-#----------------------------------------------------
+#---------------------------------------------
+#TASK 4: SOLVE AND SIMULATE FOR ALL PARTITIONS
+#---------------------------------------------
 
 if task = 4 then {
 	
-	let solveH := 0;
+	let alp := 'Pprime';
 	
-	solve DSPL;
-	let {i in Ical} Woverline[i] := W[1,i,c[i]];
-	let {t in Tcal, i in 1..I, j in Jcal, u in 0..1} betaoverline[t,i,j,u] := beta[t,i,j,u];
+	solve DNM;
+	let {i in Ical} Woverline[i] := WNM[1,i,c[i]];
+	let {t in Tcal, i in 1..I, j in Jcal, u in 0..1} betaoverline[t,i,j,u] := betaNM[t,i,j,u];
 	
 	include 004enumerateAllSubsetsAndPartitions.run;
 	
@@ -145,6 +159,7 @@ if task = 4 then {
 	for {IcalPsiRest in Pcal[I mod qBar,I], ptildePsi in PcalTilde} {
 		let {n in 1..N} Icaln[n] := IcalnAllPartitions[IcalPsiRest,ptildePsi,n];
 		include 004determineNetworkMeasure.run;
+		display Icaln;
 		include 004solveAndSimulate.run;
 		printf "%f,%f,%f,%f\n" , Mpartition , upperbound , revenue , standarderror > ./000correlation.txt;
 	}		

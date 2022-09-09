@@ -1,0 +1,44 @@
+
+#small running example, SRE
+
+#SETTINGS
+##################
+param demandTwoLegs := 0; #base case: 2
+param demandThreeLegs := 0; #base case: 1
+##################
+
+param I := 3;
+param C := 4;
+param T := 20; 
+param J := 10;
+
+param A: 0 1 2 3 4 5 6 7 8 9 10 := 
+1	0	1	0	0	0	1	1	0	0	0	1
+2	0	0	1	0	1	1	0	1	0	1	1
+3	0	0	0	1	1	1	0	0	1	1	1
+;
+
+let {i in Ical} c[i] := C;
+	
+let fconst[0] := 0;
+let {j in 1..3} fconst[j] := 5; 
+let fconst[4] := 15; 
+let fconst[5] := 25; 
+let {j in J/2+1..J} fconst[j] := 2*fconst[j-J/2];
+let {t in Tcal, j in Jcal} f[t,j] := fconst[j];
+
+
+for {t in 1..T} {
+	let p[t,4] := demandTwoLegs/(2*T);
+	let p[t,5] := demandThreeLegs/(2*T);
+	let p[t,1] := C*1.3/(2*T) - p[t,5];
+	let p[t,2] := C*1.3/(2*T) - p[t,4] - p[t,5];
+	let p[t,3] := C*1.3/(2*T) - p[t,4] - p[t,5];
+	let {j in J/2+1..J} p[t,j] := p[t,j-J/2];
+}
+let {t in 1..T} p[t,0] := 1-sum{j in 1..J} p[t,j];
+for {j in Jcal} let d[j] := sum{t in 1..T} p[t,j];
+
+
+
+

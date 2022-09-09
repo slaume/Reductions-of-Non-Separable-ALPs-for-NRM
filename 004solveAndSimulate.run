@@ -16,24 +16,63 @@ for {n in N+1..I} {
 }
 let qBar := max{n in 1..N} qn[n];
 
-#SOLVE COMPACT ALP
-if solveH = 1 then {
-	solve Hnonsep;
-} else {
-	solve Pnonsepprime; 
+#SOLVE REDUCED ALP (OR EXACT BELLMAN EQUATION)
+#and extract upper bound and dual values
+if N > 1 or sum{n in 1..N}qn[n] < I then {
+	if alp = 'H' or alp = 'Pprime' then {
+		if primaldual = 'primal' then {
+			if alp = 'H' then {
+				solve Hnonsep;
+			} else if alp = 'Pprime' then {
+				solve Pnonsepprime; 
+			}
+			let upperbound := Z;
+			let {i in IcalAL} Vlin[1,i] := conP3a[i];
+			let {t in 2..T, i in IcalAL} Vlin[t,i] := conP3b[t,i];
+			let {n in 1..N} Vnonlin[1,n,Rnmax[n]] := conP1a[n];
+			let {t in 2..T, n in 1..N, Rn in 0..Rnmax[n]} Vnonlin[t,n,Rn] := conP1b[t,n,Rn];
+		} else if primaldual = 'dual' then {
+			solve DHnonsep;
+			let upperbound := ZD;
+			let {t in 1..T, i in IcalAL} Vlin[t,i] := V[t,i];
+			let {t in 2..T, n in 1..N, Rn in 0..Rnmax[n]} Vnonlin[t,n,Rn] := W[t,n,Rn];
+		}	
+	} else if alp = 'P' then {
+		if primaldual = 'primal' then {
+			solve PnonsepHalf;
+			let upperbound := Zhalf;
+			let {i in IcalAL} Vlin[1,i] := conPhalf3a[i];
+			let {t in 2..T, i in IcalAL} Vlin[t,i] := conPhalf3b[t,i];
+			let {n in 1..N} Vnonlin[1,n,Rnmax[n]] := conPhalf1a[n];
+			let {t in 2..T, n in 1..N, Rn in 0..Rnmax[n]} Vnonlin[t,n,Rn] := conPhalf1b[t,n,Rn];
+		} else if primaldual = 'dual' then {
+			solve DnonsepHalf;
+			let upperbound := ZDhalf;
+			let {t in 1..T, i in IcalAL} Vlin[t,i] := V[t,i];
+			let {t in 2..T, n in 1..N, Rn in 0..Rnmax[n]} Vnonlin[t,n,Rn] := W[t,n,Rn];
+		}
+	}
+	let {i in IcalAL} Vlin[T+1,i] := 0;	
+	let {n in 1..N, Rn in 0..Rnmax[n]} Vnonlin[T+1,n,Rn] := 0;
+	let computingtime := _solve_elapsed_time;
+} else if N = 1 and sum{n in 1..N}qn[n] = I then {
+	let {Rn in 0..Rnmax[1]} Vnonlin[T+1,1,Rn] := 0;
+	for {t in T..1 by -1} {
+		for {Rn in 0..Rnmax[1]} {
+			let {i in 1..I} rexact[i] := floor((Rn mod (prod{ii in 1..i}(c[ii]+1)))/(prod{ii in 1..i-1}(c[ii]+1)));
+			let Vnonlin[t,1,Rn] := sum{j in Jcal} p[t,j]*(max{u in 0..min(1,1+min{i in Ical}(rexact[i]-A[i,j]))}(
+				u*f[t,j] + Vnonlin[t+1,1,
+					sum{i in 1..I} ((rexact[i]-u*A[i,j])*prod{ii in 1..i-1}(c[ii]+1))
+				]
+			));
+		}
+	}
+	let upperbound := Vnonlin[1,1,Rnmax[1]];
 }
-let upperbound := Z;
-
-#extract value function approximation
-let {i in IcalAL} Vlin[1,i] := con3a[i];
-let {t in 2..T, i in IcalAL} Vlin[t,i] := con3b[t,i];
-let {i in IcalAL} Vlin[T+1,i] := 0;	
-let {n in 1..N} Vnonlin[1,n,Rnmax[n]] := con1a[n];
-let {t in 2..T, n in 1..N, Rn in 0..Rnmax[n]} Vnonlin[t,n,Rn] := con1b[t,n,Rn];
-let {n in 1..N, Rn in 0..Rnmax[n]} Vnonlin[T+1,n,Rn] := 0;
 
 #SIMULATION
 for {s in 1..S} {
+	display s;
 	#initialize remaining capacity and gain
 	let {i in Ical} rCapacity[i] := c[i];
 	let gain[s] := 0;
