@@ -1,5 +1,7 @@
 
 #consecutive bus line, CBL
+#the minimal length of an OD-pair is 1, 
+#the maximal length of an OD-pair is I/m
 
 #SETTINGS
 ##################

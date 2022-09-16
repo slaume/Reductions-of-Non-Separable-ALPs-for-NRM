@@ -5,10 +5,10 @@ include 003modelfile.mod;
 #SELECT TASK
 #task = 1: solve and simulate with manually defined partition
 #task = 2: find partition with largest network measure
-#task = 3: find subset with largest network measure
+#task = 3: find single subnetwork with largest network measure
 #task = 4: solve and simulate for all partitions
 ##################
-	let task := 4;
+	let task := 1;
 ##################
 
 #SELECT DATA FILE
@@ -19,7 +19,7 @@ include 003modelfile.mod;
 #datatype = 5: real bus line, RBL, see "002datafileRBL.dat"
 #datatype = 6: example for non-equivalence of ALPs, see "002datafileNE.dat"
 ##################
-	let datatype := 6;
+	let datatype := 3;
 ##################
 
 if datatype = 1 then {data 002datafileSRE.dat;}
@@ -30,36 +30,35 @@ if datatype = 5 then {data 002datafileRBL.dat;}
 if datatype = 6 then {data 002datafileNE.dat;}
 
 #OTHER SETTINGS
-#qBar: size of subsets
+#qBar: size of subnetworks
 #S: number of simulation runs
 #alp: may be 
-#	'Pprime': 	reduction (P'_NSEP), 
-#	'H':		heuristic reduction (H_NSEP)
-#	'P': 		exact (P_NSEP) using a state-space reduction
+#	'Pprime': 	reduction P'_NSEP, 
+#	'H':		heuristic reduction H_NSEP
+#	'P': 		exact P_NSEP using a state-space reduction
 #Attention: 'P' needs much computating power, especially if J is large!
 #primaldual: may be
-#	'primal': 	solve primal (P'), (H), (P)
-#	'dual': 	solve dual (D'), (D^H), (D)
+#	'primal': 	solve primal P', H, P
+#	'dual': 	solve dual D', D^H, D
+#the experiments in the paper are done with 'primal'
 ##################
 	let qBar := 2; #not used for task 1
-	let S := 100; #not used for task 2 and 3
-	let alp := 'Pprime'; #not used for task 2, 3 and 4
-	let primaldual := 'dual'; 
+	let S := 10; #not used for task 2 and 3
+	let alp := 'H'; #not used for task 2, 3 and 4
+	let primaldual := 'primal';  
 ##################
 
 #SETTINGS FOR TASK 1
+#define the number N of subnetworks
+#and the elements of \cal{I}_n
 ##################
 	if task = 1 then {
-		let N := 2;
-		let Icaln[1] := {2,4};
-		let Icaln[2] := {1,3};
-		#let Icaln[3] := {1};
-		#let Icaln[3] := {3};
-		#let Icaln[4] := {4};
-		#let Icaln[5] := {5};
-		#let Icaln[6] := {6};
-		#let Icaln[7] := {7};
-		#let Icaln[8] := {8};
+		let N := 4;
+		#let Icaln[1] := {3,4};
+		let Icaln[1] := {5,6};
+		let Icaln[2] := {1,8};
+		let Icaln[3] := {2,7};
+		let Icaln[4] := {3,4};
 	}
 ##################
 
@@ -70,12 +69,14 @@ if datatype = 6 then {data 002datafileNE.dat;}
 
 if task = 1 then {
 
+	#solve linear program and simulate policy
 	include 004solveAndSimulate.run;
 	
-	display upperbound;
-	display revenue;
-	display standarderror;
-	display computingtime;
+	#output
+	display upperbound; #optimal value of linear program
+	display revenue; #average revenue from policy simulation
+	display standarderror; #standard error of average revenue
+	display computingtime; #time used for solving linear program
 }
 
 
@@ -85,16 +86,18 @@ if task = 1 then {
 
 if task = 2 then {
 	
-	solve DNM;
+	solve DNM; #solve SPL for computing network measure
 	let {i in Ical} Woverline[i] := WNM[1,i,c[i]];
 	let {t in Tcal, i in 1..I, j in Jcal, u in 0..1} betaoverline[t,i,j,u] := betaNM[t,i,j,u];
 	
+	#compute auxiliary sets used for enumerating all partitions or all subnetworks
 	include 004enumerateAllSubsetsAndPartitions.run;
 	
 	let N := ceil(I/qBar);
-	
 	let maxM := -Infinity;
 	let {n in 1..N} IcalnMaxM[n] := {};
+	
+	#go through all partitions and find the partition with the largest network measure
 	for {IcalPsiRest in Pcal[I mod qBar,I], ptildePsi in PcalTilde} {
 		let {n in 1..N} Icaln[n] := IcalnAllPartitions[IcalPsiRest,ptildePsi,n];
 		include 004determineNetworkMeasure.run;
@@ -105,6 +108,7 @@ if task = 2 then {
 	}
 	let {n in 1..N} Icaln[n] := IcalnMaxM[n];
 	
+	#output
 	display Icaln;
 }
 
@@ -115,16 +119,18 @@ if task = 2 then {
 
 if task = 3 then {
 	
-	solve DNM;
+	solve DNM; #solve SPL for computing network measure
 	let {i in Ical} Woverline[i] := WNM[1,i,c[i]];
 	let {t in Tcal, i in 1..I, j in Jcal, u in 0..1} betaoverline[t,i,j,u] := betaNM[t,i,j,u];
 	
+	#compute auxiliary sets used for enumerating all partitions or all subnetworks
 	include 004enumerateAllSubsetsAndPartitions.run;
 	
 	let N := 1;
-	
 	let maxM := -Infinity;
 	let IcalnMaxM[1] := {};
+	
+	#go through all subnetworks and find the subnetwork with the largest network measure
 	for {IcalnPsi in Pcal[qBar,I]} {
 		let Icaln[1] := IcalnAllSubsets[IcalnPsi];
 		include 004determineNetworkMeasure.run;
@@ -135,6 +141,7 @@ if task = 3 then {
 	}
 	let Icaln[1] := IcalnMaxM[1];
 	
+	#output
 	display Icaln[1];
 }
 
@@ -147,20 +154,24 @@ if task = 4 then {
 	
 	let alp := 'Pprime';
 	
-	solve DNM;
+	solve DNM; #solve SPL for computing network measure
 	let {i in Ical} Woverline[i] := WNM[1,i,c[i]];
 	let {t in Tcal, i in 1..I, j in Jcal, u in 0..1} betaoverline[t,i,j,u] := betaNM[t,i,j,u];
 	
+	#compute auxiliary sets used for enumerating all partitions or all subnetworks
 	include 004enumerateAllSubsetsAndPartitions.run;
 	
 	let N := ceil(I/qBar);
-	
 	printf "%s,%s,%s,%s\n" , 'network measure' , 'upper bound' , 'revenue' , 'standard error' > ./000correlation.txt;
+	
+	#go through all partitions and compute upper bound and average revenue
 	for {IcalPsiRest in Pcal[I mod qBar,I], ptildePsi in PcalTilde} {
 		let {n in 1..N} Icaln[n] := IcalnAllPartitions[IcalPsiRest,ptildePsi,n];
 		include 004determineNetworkMeasure.run;
 		display Icaln;
 		include 004solveAndSimulate.run;
+		
+		#output
 		printf "%f,%f,%f,%f\n" , Mpartition , upperbound , revenue , standarderror > ./000correlation.txt;
 	}		
 }

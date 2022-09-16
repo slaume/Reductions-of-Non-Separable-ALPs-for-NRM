@@ -1,4 +1,6 @@
 
+#DETERMINE THE NETWORK MEASURE M_{(I_n)_n}
+#see Section 7
 
 #compute indices of partition
 for {n in 1..N} {

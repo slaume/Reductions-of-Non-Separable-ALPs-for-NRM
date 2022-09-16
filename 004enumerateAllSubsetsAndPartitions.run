@@ -1,10 +1,9 @@
 
+#COMPUTE ALL PARTITIONS AND SUBNETWORKS
 
 let N := ceil(I/qBar);
 
-
 #PREPARATION
-
 for {n in 1..floor(I/qBar)} {	
 	let qCompPcal := qBar-1;
 	let ICompPcal := I-(n-1)*qBar-(I mod qBar)-1;
@@ -49,7 +48,6 @@ for {IcalPR in 0..ICompPcal^qCompPcal-1} {
 
 
 #GO THROUGH ALL PARTITIONS
-
 for {IcalPsiRest in Pcal[I mod qBar,I], ptildePsi in PcalTilde} {
 	let IcalnPsiReverseFromScalar := IcalPsiRest;
 	let IcalReverseFromScalar := Ical;
@@ -119,8 +117,7 @@ for {IcalPsiRest in Pcal[I mod qBar,I], ptildePsi in PcalTilde} {
 }
 
 
-#GO THROUGH ALL SUBSETS
-
+#GO THROUGH ALL SUBNETWORKS
 for {IcalnPsi in Pcal[qBar,I]} {
 	let IcalnPsiReverseFromScalar := IcalnPsi;
 	let IcalReverseFromScalar := Ical;

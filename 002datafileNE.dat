@@ -1,6 +1,6 @@
 
 
-#example where (P_NSEP), (P'_NSEP), (H_NSEP) are not equivalent, NE
+#example where P_NSEP, P'_NSEP, H_NSEP are not equivalent, NE
 
 param I := 4;
 param J := 8; 

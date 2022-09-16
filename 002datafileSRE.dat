@@ -3,8 +3,8 @@
 
 #SETTINGS
 ##################
-param demandTwoLegs := 0; #base case: 2
-param demandThreeLegs := 0; #base case: 1
+param demandTwoLegs := 2; #demand d_{BD,low} + d_{BD,high}, base case: 2
+param demandThreeLegs := 1; #demand d_{AD,low} + d_{AD,high}, base case: 1
 ##################
 
 param I := 3;

@@ -1,5 +1,7 @@
 
 
+param counter; #auxiliary variable for iterations
+
 
 #-----------------------------------------------------------------------------------
 #SOLVER OPTIONS
@@ -9,11 +11,11 @@ option show_stats 1;
 option cplex_options 'baropt bardisplay=1 comptol=1e-8 crossover=0';
 
 
-
-param counter; #auxiliary
-param tol := 0.0000001;
-param task;
-param datatype;
+#-----------------------------------------------------------------------------------
+#SETTING PARAMETERS, see 000Main.run
+#-----------------------------------------------------------------------------------
+param task; 
+param datatype; 
 param alp symbolic; 
 param primaldual symbolic;
 
@@ -53,15 +55,14 @@ param demandThreeLegs; #demand for OD-pair AD for small running example
 param rexact {i in Ical}; #for solving the exact Bellman equation
 
 
-
 #-----------------------------------------------------------------------------------
 #PARTITIONS OF {1,...I} AND CORRESPONDING METHODS
 #-----------------------------------------------------------------------------------
 param N; #number of subnetworks Icaln
-param qBar; #size of subnetworks for NSEP
+param qBar; #size of subnetworks
 #sets Icaln etc.
 set Icaln {n in 1..I}; #partition (Icaln)_n
-#all resources i that are not covered by non-sep parts 
+#all resources i that are not covered by non-separable subnetworks 
 #and are therefore treated affine-linear (AL)
 set IcalAL := Ical diff (union {n in 1..N} Icaln[n]);
 #sizes and indices of subnetworks
@@ -71,9 +72,6 @@ param inq {n in 1..I, q in 1..I}; #indices i of Icaln
 #maximal Rn and maximal U
 param Rnmax {n in 1..N} := sum{q in 1..qn[n]}c[inq[n,q]]*prod{qq in 1..q-1}(c[inq[n,qq]]+1);
 param Umax := sum{j in 0..J} 2^j;
-
-
-
 
 
 #-----------------------------------------------------------------------------------
@@ -105,26 +103,24 @@ set IcalnMaxM {n in 1..N};
 param maxM;
 
 
-
-
 #-----------------------------------------------------------------------------------
 #SIMULATION
 #-----------------------------------------------------------------------------------
 #general
 param rCapacity {i in Ical}; #remaining capacity
 param available; #1 or 0 whether product is available or not
-param jArrived; #requested product
+param jArrived; #requested product j
 param gain {s in Scal}; #gain per simulation s
-param revenue; #total revenue, sum of gain over all simulations s
-param standarderror; #standard error of gain over all simulations s
-param marginalvalue; #approximate difference of value function, marginal value
+param revenue; #average revenue of all simulations s
+param standarderror; #standard error of average revenue
+param marginalvalue; #marginal value using the value function approximation
 #dices for randomness
 param dice;
 param dice1;
 param dice2;
-param upperbound;
-param computingtime;
-
+param upperbound; #optimal value of linear program, Z
+param computingtime; #time used for computing linear program
+param tol := 0.0000001; #tolerance for accepting customer request
 
 
 #-----------------------------------------------------------------------------------
@@ -136,7 +132,6 @@ param Vnonlin {t in 1..T+1, n in 1..I, Rn in 0..RnTop}; #variable W in dual LP
 param Vlin {t in 1..T+1, i in Ical}; #variable V in dual LP
 
 
-
 #-----------------------------------------------------------------------------------
 #DETERMINE NETWORK MEASURE
 #-----------------------------------------------------------------------------------
@@ -146,7 +141,6 @@ param Wstar {t in 1..T+1, n in 1..N, Rn in 0..Rnmax[n]};
 param rNWM {n in 1..N, q in 1..qn[n]};
 param Msubnetwork {n in 1..N};
 param Mpartition;
-
 
 
 #-----------------------------------------------------------------------------------
@@ -181,12 +175,11 @@ var gammaHalf {t in Tcal, i in Ical} >= 0;
 var thetaHalf {t in Tcal};
 
 
-
 #-----------------------------------------------------------------------------------
 #LINEAR PROGRAMS
 #-----------------------------------------------------------------------------------
 
-#(D') for Network Measure, SPL (N = I)
+#D' for Network Measure, SPL (N = I)
 #-----------------------------------------
 minimize ZNM: sum{i in 1..I} WNM[1,i,c[i]];
 subject to conNMa {t in Tcal, i in 1..I, r in 0..c[i]}:
@@ -200,7 +193,7 @@ subject to conNMc {t in Tcal, j in Jcal, u in 0..1}:
 subject to conNMd {i in 1..I, r in 0..c[i]}:
 	WNM[T+1,i,r] = 0;
 	
-#(P') and (H)
+#P' and H
 #-----------------------------------------
 maximize Z: sum{t in Tcal, j in Jcal, u in 0..1} p[t,j]*f[t,j]*u*mu[t,j,u];
 #flow constraints for non-sep parts
@@ -252,7 +245,7 @@ subject to conPX {t in Tcal, n in 1..N, j in Jcal, Rn in 0..Rnmax[n]}:
 		))
 		..1} xi[t,n,j,Rn,u] = 0;
 		
-#(D^H) and (D')
+#D^H and D'
 #-----------------------------------------
 minimize ZD: sum{n in 1..N} W[1,n,Rnmax[n]] + sum{i in IcalAL} V[1,i]*c[i] 
 	+ sum{t in Tcal, j in Jcal} theta[t,j];
@@ -294,7 +287,7 @@ subject to conD6a {n in 1..N, Rn in 0..Rnmax[n]}:
 subject to conD6b {i in IcalAL}:
 	V[T+1,i] = 0;
 	
-#(P) not reduced
+#P only reduced in the state space
 #-----------------------------------------
 maximize Zhalf: sum{t in Tcal, j in Jcal, U in 0..Umax} p[t,j]*f[t,j]*floor((U mod 2^(j+1))/(2^j))*muHalf[t,U];
 #flow constraints for non-sep parts
@@ -341,7 +334,7 @@ subject to conPhalfX {t in Tcal, n in 1..N, Rn in 0..Rnmax[n], U in 0..Umax}:
 		- A[inq[n,q],j]*floor((U mod 2^(j+1))/(2^j))
 	))*xiHalf[t,n,Rn,U] = 0;
 
-#(D) half reduced
+#D only reduced in the state space
 #-----------------------------------------
 minimize ZDhalf: sum{n in 1..N} W[1,n,Rnmax[n]] + sum{i in IcalAL}V[1,i]*c[i] + sum{t in Tcal} thetaHalf[t];
 subject to conDhalf1 {t in Tcal, n in 1..N, Rn in 0..Rnmax[n]}:
@@ -376,31 +369,31 @@ subject to conDhalf5b {i in IcalAL}:
 		
 
 
-#(D') for SPL, used for determining network measure
+#D' for SPL, used for determining network measure
 problem DNM: WNM, alphaNM, betaNM, conNMa, conNMb, conNMc, conNMd, ZNM;	
-#(H) 	
+#H 	
 problem Hnonsep: varrho, mu, xi, rho, Upsilon, 
 	conP1a, conP1b, conP2a, conP2b, conP2c, conP2d, 
 	conP3a, conP3b, conP3c, conP4a, conP4b, conP4c, 
 	conPX,
 	Z;
-#(P') 
+#P' 
 problem Pnonsepprime: varrho, mu, xi, rho, 
 	conP1a, conP1b, conP2a, conP2b, conP2c, conP2d, 
 	conP3a, conP3b, conP3c, 
 	conPX,
 	Z;
-#(D^H) and (D')
+#D^H and D'
 problem DHnonsep: W,V,alpha,beta,gamma,delta,epsilon,theta,phi,
 	conD1,conD2,conD3,conD4,conD5a,conD5b,conD6a,conD6b,
 	ZD;
-#(P) half reduced
+#P only reduced in the state space
 problem PnonsepHalf: varrho, rho, xiHalf, muHalf,
 	conPhalf1a, conPhalf1b, conPhalf2a, conPhalf2b, conPhalf2c, conPhalf2d, 
 	conPhalf3a, conPhalf3b, conPhalf3c,
 	conPhalfX,
 	Zhalf;
-#(D) half reduced
+#D only reduced in the state space
 problem DnonsepHalf: W,V,alphaHalf,betaHalf,gammaHalf,thetaHalf,
 	conDhalf1, conDhalf2, conDhalf3, conDhalf4, conDhalf5a, conDhalf5b, 
 	ZDhalf;

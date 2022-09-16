@@ -1,4 +1,5 @@
 
+#SOLVE LINEAR PROGRAM AND SIMULATE POLICY
 
 #compute indices of partition
 for {n in 1..N} {
@@ -56,6 +57,7 @@ if N > 1 or sum{n in 1..N}qn[n] < I then {
 	let {n in 1..N, Rn in 0..Rnmax[n]} Vnonlin[T+1,n,Rn] := 0;
 	let computingtime := _solve_elapsed_time;
 } else if N = 1 and sum{n in 1..N}qn[n] = I then {
+	#exact Bellman equation
 	let {Rn in 0..Rnmax[1]} Vnonlin[T+1,1,Rn] := 0;
 	for {t in T..1 by -1} {
 		for {Rn in 0..Rnmax[1]} {
@@ -78,7 +80,7 @@ for {s in 1..S} {
 	let gain[s] := 0;
 	#go through all time steps t
 	for {t in 1..T} {		
-		#determine arriving customer for RM
+		#determine arriving customer j
 		let dice := Uniform(0,1);
 		let jArrived := 0;
 		for {j in 1..J} {	

@@ -4,10 +4,10 @@
 #SETTINGS
 ##################
 	param I := 8;
-	param T := 8;
-	param C := 2;
-	param lunderline := 1;
-	param loverline := 8;
+	param T := 32;
+	param C := 8;
+	param lunderline := 1; #minimal length of OD-pair
+	param loverline := 8; #maximal length of OD-pair
 ##################
 
 param p0 := 0.2;
